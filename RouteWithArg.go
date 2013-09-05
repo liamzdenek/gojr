@@ -1,8 +1,6 @@
 package gojr
 
 import (
-	"fmt"
-	"net/http"
 	"strings"
 )
 
@@ -18,9 +16,8 @@ func NewRouteWithArg(parameter string, steps ...Stepper) *RouteWithArg {
 	}
 }
 
-func (r *RouteWithArg) Step(req *http.Request, url string, parameters map[string]string) (bool, interface{}) {
+func (r *RouteWithArg) Step(req *Request, url string) (bool, interface{}) {
 	trimmed_url_parts := strings.SplitN(url[1:], "/", 2)
-	fmt.Printf("Checking route with arg step %v\n", trimmed_url_parts);
 	if len(trimmed_url_parts) == 0 {
 		return false, nil
 	}
@@ -30,10 +27,9 @@ func (r *RouteWithArg) Step(req *http.Request, url string, parameters map[string
 	}
 
 	value := trimmed_url_parts[0]
-	parameters[r.Parameter] = value
-	defer delete(parameters, r.Parameter)
+	req.Parameters[r.Parameter] = value
+	defer delete(req.Parameters, r.Parameter)
 
-
-	found, response := UtilStepThroughSteps(req, "/"+trimmed_url_parts[1], parameters, r.Steps) // must not be in the same instruction as the return. defers are ran before the return parameters are evaluated
+	found, response := UtilStepThroughSteps(req, "/"+trimmed_url_parts[1], r.Steps) // must not be in the same instruction as the return. defers are ran before the return parameters are evaluated
 	return found, response
 }

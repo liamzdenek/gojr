@@ -5,10 +5,15 @@ import (
 	"net/http"
 )
 
-type HTTPFunc func(*http.Request, map[string]string) interface{}
+type HTTPFunc func(*Request) interface{}
 
 type Stepper interface {
-	Step(*http.Request, string, map[string]string) (bool, interface{})
+	Step(*Request, string) (bool, interface{})
+}
+
+type Request struct {
+	http.Request
+	Parameters map[string]string
 }
 
 type API struct {
@@ -21,8 +26,10 @@ func NewAPI(steps ...Stepper) *API {
 	}
 }
 
-func (api *API) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	didroute, response := UtilStepThroughSteps(req, "/"+req.URL.Path, map[string]string{}, api.Steps)
+func (api *API) ServeHTTP(res http.ResponseWriter, http_req *http.Request) {
+	req := &Request{*http_req, map[string]string{}}
+
+	didroute, response := UtilStepThroughSteps(req, "/"+req.URL.Path, api.Steps)
 	if didroute {
 		j, _ := json.Marshal(response)
 		res.Write(j)
@@ -33,9 +40,9 @@ func (api *API) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	res.Write(j)
 }
 
-func UtilStepThroughSteps(req *http.Request, url string, parameters map[string]string, steps []Stepper) (bool, interface{}) {
+func UtilStepThroughSteps(req *Request, url string, steps []Stepper) (bool, interface{}) {
 	for _, step := range steps {
-		didroute, response := step.Step(req, url, parameters)
+		didroute, response := step.Step(req, url)
 		
 		if didroute {
 			return true, response // did match
