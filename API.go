@@ -1,9 +1,9 @@
-package gojrest;
+package gojr
 
 import (
-	"net/http";
 	"encoding/json"
-);
+	"net/http"
+)
 
 type HTTPFunc func(*http.Request, map[string]string) interface{}
 
@@ -36,6 +36,7 @@ func (api *API) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func UtilStepThroughSteps(req *http.Request, url string, parameters map[string]string, steps []Stepper) (bool, interface{}) {
 	for _, step := range steps {
 		didroute, response := step.Step(req, url, parameters)
+		
 		if didroute {
 			return true, response // did match
 		}
