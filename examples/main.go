@@ -36,7 +36,16 @@ func main() {
 				gojr.NewRouteWithoutArg("panic",
 					gojr.NewAPICall("GET", func(req *gojr.Request) interface{} {
 						panic("Divize by zero error or something")
-						return struct{ Info string}{"This would return a list of "+req.Parameters["username"]+"'s friends"}
+						return struct{ Info string }{"This would return a list of " + req.Parameters["username"] + "'s friends"}
+					}),
+				),
+
+				// curl -X POST  localhost:8080/api/user/anystringhere/require
+				// curl -X POST 'localhost:8080/api/user/anystringhere/require?key=anyvaluehere'
+				gojr.NewRouteWithoutArg("require",
+					gojr.NewAPICall("GET", func(req *gojr.Request) interface{} {
+						k := req.MustFormValue("key")
+						return struct{ Info string }{"You provided the argument 'key' with value: " + k}
 					}),
 				),
 			),
