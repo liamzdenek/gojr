@@ -3,6 +3,7 @@ package gojr
 import (
 	"encoding/json"
 	"net/http"
+	"runtime/debug"
 )
 
 type HTTPFunc func(*Request) interface{}
@@ -28,6 +29,15 @@ func NewAPI(steps ...Stepper) *API {
 
 func (api *API) ServeHTTP(res http.ResponseWriter, http_req *http.Request) {
 	req := &Request{*http_req, map[string]string{}}
+
+	defer func() {
+		if r := recover(); r != nil {
+			res.WriteHeader(500);
+			j, _ := json.Marshal(struct{Error bool; ErrorMessage string}{true,"There was an internal error parsing your request"})
+			res.Write(j);
+			debug.PrintStack()
+		}
+	}()
 
 	didroute, response := UtilStepThroughSteps(req, "/"+req.URL.Path, api.Steps)
 	if didroute {

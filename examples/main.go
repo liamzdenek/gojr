@@ -31,6 +31,14 @@ func main() {
 						return struct{ Info string }{"This would log you in to user: " + req.Parameters["username"]}
 					}),
 				),
+
+				// curl -X POST localhost:8080/api/user/anystringhere/panic
+				gojr.NewRouteWithoutArg("panic",
+					gojr.NewAPICall("GET", func(req *gojr.Request) interface{} {
+						panic("Divize by zero error or something")
+						return struct{ Info string}{"This would return a list of "+req.Parameters["username"]+"'s friends"}
+					}),
+				),
 			),
 		),
 	)
