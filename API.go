@@ -15,6 +15,8 @@ type Stepper interface {
 type Request struct {
 	http.Request
 	Parameters map[string]string
+
+	ValueMissingErrors []ErrorValueMissing
 }
 
 type ErrorValueMissing struct {
@@ -24,7 +26,14 @@ type ErrorValueMissing struct {
 func (r *Request) MustFormValue(k string) (v string) {
 	v = r.FormValue(k)
 	if v == "" {
-		panic(ErrorValueMissing{Key: k})
+		r.ValueMissingErrors = append(r.ValueMissingErrors, ErrorValueMissing{Key: k})
+	}
+	return
+}
+
+func (r *Request) CompleteInputValidation() () {
+	if len(r.ValueMissingErrors) > 0 {
+		panic(r.ValueMissingErrors)
 	}
 	return
 }
@@ -32,7 +41,7 @@ func (r *Request) MustFormValue(k string) (v string) {
 func (r *Request) MustPostFormValue(k string) (v string) {
 	v = r.PostFormValue(k)
 	if v == "" {
-		panic(ErrorValueMissing{Key: k})
+		r.ValueMissingErrors = append(r.ValueMissingErrors, ErrorValueMissing{Key: k})
 	}
 	return
 }
@@ -56,18 +65,23 @@ func NewAPI(steps ...Stepper) *API {
 }
 
 func (api *API) ServeHTTP(res http.ResponseWriter, http_req *http.Request) {
-	req := &Request{*http_req, map[string]string{}}
+	req := &Request{*http_req, map[string]string{}, []ErrorValueMissing{}}
 
 	defer func() {
 		if r := recover(); r != nil {
 			switch r.(type) {
-			case ErrorValueMissing:
-				e := r.(ErrorValueMissing)
+			case []ErrorValueMissing:
+				es := r.([]ErrorValueMissing)
+				es_str := []string{};
+				for _,e := range es {
+					es_str = append(es_str, e.Key)
+				}
 				res.WriteHeader(api.ErrorCode_ValueMissing)
 				j, _ := json.Marshal(struct {
 					Error                      bool
-					ErrorMessage, ParameterKey string
-				}{true, "A required parameter was not provided", e.Key})
+					ErrorMessage string
+					ParameterKeys []string
+				}{true, "Required parameters were not provided", es_str})
 				res.Write(j)
 			default:
 				res.WriteHeader(api.ErrorCode_InternalPanic)
